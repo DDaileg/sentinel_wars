@@ -31,6 +31,8 @@ class Enemy:
         self.color      = s['color']
         self.flying     = s['flying']
         self.reward     = s['reward']
+        self.is_elite    = s.get('is_elite',    False)
+        self.leak_damage = s.get('leak_damage', 1)
 
         # Cumulative pixels traveled — used for first/last targeting comparisons
         self.path_progress = 0.0

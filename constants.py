@@ -53,7 +53,7 @@ COLOR_COLOSSUS   = (190,  35,  35)
 
 # ── Economy ──────────────────────────────────────────────────────────────────
 STARTING_MONEY   = 575
-STARTING_LIVES   = 20
+STARTING_LIVES   = 50
 WAVE_BONUS       = 50
 AUTO_WAVE_DELAY  = 3.0   # seconds between wave complete and auto-start
 SELL_PERCENTAGE  = 0.60   # fraction of total_spent returned on sell
@@ -197,31 +197,37 @@ ENEMY_STATS = {
         'speed': 80,  'hp': 100,  'armor': 0.0,  'radius': 12,
         'color': COLOR_RUNNER,    'flying': False, 'reward': 7,
         'freeze_resist': 0.0, 'burn_resist': 0.0, 'chain_resist': False,
+        'is_elite': False, 'leak_damage': 1,
     },
     'Dasher': {
         'speed': 165, 'hp': 50,   'armor': 0.0,  'radius': 10,
         'color': COLOR_DASHER,    'flying': False, 'reward': 6,
         'freeze_resist': 0.0, 'burn_resist': 0.0, 'chain_resist': False,
+        'is_elite': False, 'leak_damage': 1,
     },
     'Ironclad': {
         'speed': 50,  'hp': 250,  'armor': 0.40, 'radius': 16,
         'color': COLOR_IRONCLAD,  'flying': False, 'reward': 14,
         'freeze_resist': 0.5, 'burn_resist': 0.5, 'chain_resist': False,
+        'is_elite': True, 'leak_damage': 3,
     },
     'Swarmling': {
         'speed': 210, 'hp': 28,   'armor': 0.0,  'radius': 8,
         'color': COLOR_SWARMLING, 'flying': False, 'reward': 4,
         'freeze_resist': 0.0, 'burn_resist': 0.0, 'chain_resist': False,
+        'is_elite': False, 'leak_damage': 1,
     },
     'Phantom': {
         'speed': 105, 'hp': 85,   'armor': 0.0,  'radius': 11,
         'color': COLOR_PHANTOM,   'flying': True,  'reward': 11,
         'freeze_resist': 0.0, 'burn_resist': 0.0, 'chain_resist': True,
+        'is_elite': False, 'leak_damage': 1,
     },
     'Colossus': {
         'speed': 38,  'hp': 1000, 'armor': 0.30, 'radius': 26,
         'color': COLOR_COLOSSUS,  'flying': False, 'reward': 50,
         'freeze_resist': 0.75, 'burn_resist': 0.5, 'chain_resist': False,
+        'is_elite': True, 'leak_damage': 10,
     },
 }
 

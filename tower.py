@@ -16,7 +16,7 @@ from constants import (TOWER_STATS, TOWER_COSTS, TOWER_UPGRADES, SELL_PERCENTAGE
                        COLOR_YELLOW, COLOR_RED, COLOR_GRAY, COLOR_WATER, COLOR_CYAN,
                        COLOR_SENTINEL, COLOR_GLACIER, COLOR_PYRE,
                        COLOR_CONDUCTOR, COLOR_LONGWATCH, COLOR_ORANGE,
-                       COLOR_TIDE_LAUNCHER, COLOR_KRAKEN)
+                       COLOR_TIDE_LAUNCHER, COLOR_KRAKEN, COLOR_GOLD)
 from projectile import Projectile, GlacierProjectile
 
 
@@ -91,7 +91,9 @@ class Tower:
         if self.targeting_mode == TARGETING_LAST:
             return min(pool, key=lambda e: e.path_progress)
         if self.targeting_mode == TARGETING_STRONGEST:
-            return max(pool, key=lambda e: e.hp)
+            elites = [e for e in pool if e.is_elite]
+            candidates = elites if elites else pool
+            return max(candidates, key=lambda e: e.hp)
         # TARGETING_CLOSEST
         return min(pool, key=lambda e: math.hypot(e.x - self.x, e.y - self.y))
 
@@ -157,16 +159,43 @@ class Sentinel(Tower):
 
     def _draw_body(self, surface):
         ix, iy = int(self.x), int(self.y)
-        # Barrel direction
         if self.target and self.target.alive:
             angle = math.atan2(self.target.y - self.y, self.target.x - self.x)
         else:
             angle = 0.0
         ex = ix + int(17 * math.cos(angle))
         ey = iy + int(17 * math.sin(angle))
-        pygame.draw.line(surface, COLOR_DARK_GRAY, (ix, iy), (ex, ey), 6)
-        pygame.draw.circle(surface, COLOR_SENTINEL, (ix, iy), 12)
+        px = -math.sin(angle)
+        py =  math.cos(angle)
+
+        if self.upgrade_path == 'A' and self.upgrade_tier >= 2:
+            for off in (-3, 0, 3):
+                pygame.draw.line(surface, COLOR_DARK_GRAY,
+                    (ix + int(px * off), iy + int(py * off)),
+                    (ex + int(px * off), ey + int(py * off)), 3)
+        elif self.upgrade_path == 'A' and self.upgrade_tier >= 1:
+            for off in (-2, 2):
+                pygame.draw.line(surface, COLOR_DARK_GRAY,
+                    (ix + int(px * off), iy + int(py * off)),
+                    (ex + int(px * off), ey + int(py * off)), 4)
+        else:
+            pygame.draw.line(surface, COLOR_DARK_GRAY, (ix, iy), (ex, ey), 6)
+
+        if self.upgrade_path == 'A' and self.upgrade_tier >= 2:
+            body_r, body_c = 15, (60, 160, 60)
+        elif self.upgrade_path == 'B' and self.upgrade_tier >= 2:
+            body_r, body_c = 12, (160, 255, 160)
+        else:
+            body_r, body_c = 12, COLOR_SENTINEL
+
+        pygame.draw.circle(surface, body_c, (ix, iy), body_r)
         pygame.draw.circle(surface, COLOR_WHITE, (ix, iy), 5)
+
+        if self.upgrade_path == 'B' and self.upgrade_tier >= 2:
+            pygame.draw.circle(surface, body_c, (ix, iy), body_r + 4, 2)
+            pygame.draw.circle(surface, body_c, (ix, iy), body_r + 8, 2)
+        elif self.upgrade_path == 'B' and self.upgrade_tier >= 1:
+            pygame.draw.circle(surface, COLOR_SENTINEL, (ix, iy), body_r + 4, 2)
 
 
 class GlacierTower(Tower):
@@ -176,20 +205,40 @@ class GlacierTower(Tower):
 
     def _draw_body(self, surface):
         ix, iy = int(self.x), int(self.y)
+
+        if self.upgrade_path == 'A' and self.upgrade_tier >= 2:
+            spoke_reach = 21
+        elif self.upgrade_path == 'A' and self.upgrade_tier >= 1:
+            spoke_reach = 17
+        else:
+            spoke_reach = 15
+
+        bar_half = 7 if (self.upgrade_path == 'B' and self.upgrade_tier >= 1) else 4
+        center_col = (220, 240, 255) if (self.upgrade_path == 'B' and self.upgrade_tier >= 2) else COLOR_WHITE
+
         for i in range(6):
             a  = math.radians(60 * i)
-            ex = ix + int(15 * math.cos(a))
-            ey = iy + int(15 * math.sin(a))
+            ex = ix + int(spoke_reach * math.cos(a))
+            ey = iy + int(spoke_reach * math.sin(a))
             pygame.draw.line(surface, COLOR_GLACIER, (ix, iy), (ex, ey), 3)
-            # Cross-bars on each spoke
             mx_ = ix + int(9 * math.cos(a))
             my_ = iy + int(9 * math.sin(a))
             pygame.draw.line(surface, COLOR_GLACIER,
-                (int(mx_ + 4 * math.cos(a + math.pi/2)),
-                 int(my_ + 4 * math.sin(a + math.pi/2))),
-                (int(mx_ - 4 * math.cos(a + math.pi/2)),
-                 int(my_ - 4 * math.sin(a + math.pi/2))), 2)
-        pygame.draw.circle(surface, COLOR_WHITE, (ix, iy), 5)
+                (int(mx_ + bar_half * math.cos(a + math.pi/2)),
+                 int(my_ + bar_half * math.sin(a + math.pi/2))),
+                (int(mx_ - bar_half * math.cos(a + math.pi/2)),
+                 int(my_ - bar_half * math.sin(a + math.pi/2))), 2)
+            if self.upgrade_path == 'A' and self.upgrade_tier >= 2:
+                pygame.draw.polygon(surface, COLOR_WHITE, [
+                    (ex + int(3 * math.cos(a)),             ey + int(3 * math.sin(a))),
+                    (ex + int(3 * math.cos(a + math.pi/2)), ey + int(3 * math.sin(a + math.pi/2))),
+                    (ex - int(3 * math.cos(a)),             ey - int(3 * math.sin(a))),
+                    (ex - int(3 * math.cos(a + math.pi/2)), ey - int(3 * math.sin(a + math.pi/2))),
+                ])
+            if self.upgrade_path == 'B' and self.upgrade_tier >= 2:
+                pygame.draw.circle(surface, (220, 240, 255), (ex, ey), 2)
+
+        pygame.draw.circle(surface, center_col, (ix, iy), 5)
 
     def _create_projectile(self, target, all_enemies):
         return GlacierProjectile(self.x, self.y, target, {
@@ -219,16 +268,38 @@ class PyreTower(Tower):
     def _draw_body(self, surface):
         ix, iy = int(self.x), int(self.y)
         wobble = self._frame - 1   # -1, 0, 1
-        # Three layered flame triangles
+
+        height_boost = 0
+        if self.upgrade_path == 'A' and self.upgrade_tier >= 2:
+            height_boost = 12
+        elif self.upgrade_path == 'A' and self.upgrade_tier >= 1:
+            height_boost = 6
+
+        # Path B: side flames drawn first so main flame overlaps them at base
+        if self.upgrade_path == 'B' and self.upgrade_tier >= 2:
+            pygame.draw.polygon(surface, COLOR_PYRE,
+                [(ix - 14, iy + wobble), (ix + 4, iy - 7), (ix + 4, iy + 7)])
+            pygame.draw.polygon(surface, COLOR_ORANGE,
+                [(ix - 11, iy + wobble), (ix + 3, iy - 4), (ix + 3, iy + 4)])
+        if self.upgrade_path == 'B' and self.upgrade_tier >= 1:
+            pygame.draw.polygon(surface, COLOR_PYRE,
+                [(ix + 14, iy + wobble), (ix - 4, iy - 7), (ix - 4, iy + 7)])
+            pygame.draw.polygon(surface, COLOR_ORANGE,
+                [(ix + 11, iy + wobble), (ix - 3, iy - 4), (ix - 3, iy + 4)])
+
         for i, (col, tip_off) in enumerate([
             (COLOR_PYRE,   wobble),
             (COLOR_ORANGE, wobble + 2),
             (COLOR_YELLOW, wobble),
         ]):
-            pts = [(ix + tip_off, iy - 15 + i * 2),
+            pts = [(ix + tip_off, iy - 15 - height_boost + i * 2),
                    (ix - 9 + i,  iy + 8),
                    (ix + 9 - i,  iy + 8)]
             pygame.draw.polygon(surface, col, pts)
+
+        if self.upgrade_path == 'A' and self.upgrade_tier >= 2:
+            pygame.draw.circle(surface, COLOR_WHITE, (ix + wobble, iy - 27), 3)
+
         pygame.draw.circle(surface, COLOR_WHITE, (ix, iy + 5), 4)
 
     def _create_projectile(self, target, all_enemies):
@@ -258,15 +329,31 @@ class ConductorTower(Tower):
 
     def _draw_body(self, surface):
         ix, iy = int(self.x), int(self.y)
-        # Post
         pygame.draw.rect(surface, COLOR_CONDUCTOR, (ix - 4, iy - 16, 8, 22))
-        # Coil sphere
-        pygame.draw.circle(surface, COLOR_YELLOW, (ix, iy - 16), 8)
-        pygame.draw.circle(surface, COLOR_CONDUCTOR, (ix, iy - 16), 6)
-        # Lightning bolt zig-zag
+
+        coil_r = 11 if (self.upgrade_path == 'A' and self.upgrade_tier >= 2) else 8
+        pygame.draw.circle(surface, COLOR_YELLOW, (ix, iy - 16), coil_r)
+        pygame.draw.circle(surface, COLOR_CONDUCTOR, (ix, iy - 16), coil_r - 2)
+
+        bolt_col = (180, 220, 255) if (self.upgrade_path == 'B' and self.upgrade_tier >= 1) else COLOR_YELLOW
+
         bolt = [(ix + 3, iy - 24), (ix - 2, iy - 16),
                 (ix + 3, iy - 16), (ix - 3, iy - 8)]
-        pygame.draw.lines(surface, COLOR_YELLOW, False, bolt, 2)
+        pygame.draw.lines(surface, bolt_col, False, bolt, 2)
+
+        if self.upgrade_path == 'A' and self.upgrade_tier >= 2:
+            for dx in (-7, 7):
+                fb = [(ix + dx + 2, iy - 21), (ix + dx - 2, iy - 14),
+                      (ix + dx + 2, iy - 14), (ix + dx - 2, iy - 7)]
+                pygame.draw.lines(surface, bolt_col, False, fb, 1)
+        elif self.upgrade_path == 'A' and self.upgrade_tier >= 1:
+            fb = [(ix + 9, iy - 21), (ix + 4, iy - 14),
+                  (ix + 9, iy - 14), (ix + 3, iy - 7)]
+            pygame.draw.lines(surface, bolt_col, False, fb, 1)
+
+        if self.upgrade_path == 'B' and self.upgrade_tier >= 2:
+            pygame.draw.circle(surface, COLOR_CYAN, (ix, iy + 6), 4)
+            pygame.draw.circle(surface, COLOR_BLACK, (ix, iy + 6), 4, 1)
 
     def _create_projectile(self, target, all_enemies):
         return Projectile(self.x, self.y, target,
@@ -312,18 +399,48 @@ class LongwatchTower(Tower):
 
     def _draw_body(self, surface):
         ix, iy = int(self.x), int(self.y)
-        # Long barrel
+
+        if self.upgrade_path == 'A' and self.upgrade_tier >= 2:
+            scope_r = 12
+        elif self.upgrade_path == 'B' and self.upgrade_tier >= 2:
+            scope_r = 7
+        else:
+            scope_r = 9
+
         pygame.draw.rect(surface, COLOR_LONGWATCH, (ix - 3, iy - 20, 6, 26))
-        # Scope housing
-        pygame.draw.circle(surface, COLOR_LONGWATCH, (ix, iy - 10), 9)
-        pygame.draw.circle(surface, COLOR_DARK_GRAY, (ix, iy - 10), 6)
-        # Crosshair reticle
-        pygame.draw.line(surface, COLOR_LONGWATCH, (ix - 9, iy - 10), (ix + 9, iy - 10), 1)
-        pygame.draw.line(surface, COLOR_LONGWATCH, (ix, iy - 19), (ix, iy - 1), 1)
-        # Hitscan flash
+        if self.upgrade_path == 'A' and self.upgrade_tier >= 2:
+            pygame.draw.rect(surface, COLOR_GOLD, (ix - 3, iy - 20, 6, 26), 2)
+        elif self.upgrade_path == 'A' and self.upgrade_tier >= 1:
+            pygame.draw.rect(surface, COLOR_GOLD, (ix - 3, iy - 20, 6, 26), 1)
+
+        if self.upgrade_path == 'B' and self.upgrade_tier >= 2:
+            for dy in (-14, -10, -6):
+                pygame.draw.line(surface, COLOR_LONGWATCH,
+                                 (ix + 9, iy + dy), (ix + 17, iy + dy), 2)
+        elif self.upgrade_path == 'B' and self.upgrade_tier >= 1:
+            for dy in (-13, -8):
+                pygame.draw.line(surface, COLOR_LONGWATCH,
+                                 (ix + 11, iy + dy), (ix + 19, iy + dy), 2)
+
+        pygame.draw.circle(surface, COLOR_LONGWATCH, (ix, iy - 10), scope_r)
+        pygame.draw.circle(surface, COLOR_DARK_GRAY, (ix, iy - 10), scope_r - 3)
+
+        if self.upgrade_path == 'A' and self.upgrade_tier >= 2:
+            d = scope_r - 3
+            pygame.draw.lines(surface, COLOR_LONGWATCH, True, [
+                (ix,         iy - 10 - d),
+                (ix + d,     iy - 10),
+                (ix,         iy - 10 + d),
+                (ix - d,     iy - 10),
+            ], 1)
+        else:
+            pygame.draw.line(surface, COLOR_LONGWATCH,
+                             (ix - scope_r, iy - 10), (ix + scope_r, iy - 10), 1)
+            pygame.draw.line(surface, COLOR_LONGWATCH,
+                             (ix, iy - 10 - scope_r), (ix, iy - 10 + scope_r), 1)
+
         if self._flash_timer > 0 and self._flash_target:
-            pygame.draw.line(surface, COLOR_YELLOW,
-                             (ix, iy), self._flash_target, 1)
+            pygame.draw.line(surface, COLOR_YELLOW, (ix, iy), self._flash_target, 1)
 
 
 class TideLauncherTower(Tower):
@@ -342,17 +459,37 @@ class TideLauncherTower(Tower):
 
     def _draw_body(self, surface):
         ix, iy = int(self.x), int(self.y)
-        # Animated water ripple rings
-        for i in range(3):
-            r = 8 + ((i + self._ripple_phase) % 3) * 5
+
+        if self.upgrade_path == 'B' and self.upgrade_tier >= 2:
+            num_rings, spacing = 5, 3
+        elif self.upgrade_path == 'B' and self.upgrade_tier >= 1:
+            num_rings, spacing = 4, 4
+        else:
+            num_rings, spacing = 3, 5
+
+        for i in range(num_rings):
+            r = 8 + ((i + self._ripple_phase) % num_rings) * spacing
             alpha_surf = pygame.Surface((r * 2 + 4, r * 2 + 4), pygame.SRCALPHA)
             pygame.draw.circle(alpha_surf, (*COLOR_WATER, 70), (r + 2, r + 2), r, 2)
             surface.blit(alpha_surf, (ix - r - 2, iy - r - 2))
-        # Dark navy body
+
         pygame.draw.circle(surface, COLOR_TIDE_LAUNCHER, (ix, iy), 13)
-        # White cannonball icon
-        pygame.draw.circle(surface, COLOR_WHITE, (ix, iy), 6)
-        pygame.draw.circle(surface, COLOR_BLACK, (ix, iy), 6, 1)
+
+        if self.upgrade_path == 'A' and self.upgrade_tier >= 2:
+            cb_r, cb_col = 10, (220, 180, 50)
+        elif self.upgrade_path == 'A' and self.upgrade_tier >= 1:
+            cb_r, cb_col = 8, COLOR_WHITE
+        else:
+            cb_r, cb_col = 6, COLOR_WHITE
+
+        pygame.draw.circle(surface, cb_col, (ix, iy), cb_r)
+        pygame.draw.circle(surface, COLOR_BLACK, (ix, iy), cb_r, 1)
+
+        if self.upgrade_path == 'A' and self.upgrade_tier >= 2:
+            for dx, dy in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
+                pygame.draw.line(surface, (220, 180, 50),
+                    (ix + dx * cb_r, iy + dy * cb_r),
+                    (ix + dx * (cb_r + 5), iy + dy * (cb_r + 5)), 2)
 
     def _create_projectile(self, target, all_enemies):
         return Projectile(self.x, self.y, target,
@@ -379,14 +516,30 @@ class KrakenTower(Tower):
 
     def _draw_body(self, surface):
         ix, iy = int(self.x), int(self.y)
-        num_arms = 6
+
+        num_arms = 8 if (self.upgrade_path == 'A' and self.upgrade_tier >= 1) else 6
+
+        if self.upgrade_path == 'B' and self.upgrade_tier >= 2:
+            base_reach = 18
+        elif self.upgrade_path == 'B' and self.upgrade_tier >= 1:
+            base_reach = 16
+        else:
+            base_reach = 13
+
+        body_col = (40, 160, 140) if (self.upgrade_path == 'B' and self.upgrade_tier >= 2) else COLOR_KRAKEN
+
         for i in range(num_arms):
-            angle  = math.radians(360 / num_arms * i)
-            reach  = 18 if (self._arm_extended and i % 2 == 0) else 13
+            angle = math.radians(360 / num_arms * i)
+            reach = base_reach + 5 if (self._arm_extended and i % 2 == 0) else base_reach
             ex = ix + int(reach * math.cos(angle))
             ey = iy + int(reach * math.sin(angle))
-            pygame.draw.line(surface, COLOR_KRAKEN, (ix, iy), (ex, ey), 4)
-        pygame.draw.circle(surface, COLOR_KRAKEN, (ix, iy), 11)
+            pygame.draw.line(surface, body_col, (ix, iy), (ex, ey), 4)
+            if self.upgrade_path == 'A' and self.upgrade_tier >= 2:
+                pygame.draw.circle(surface, COLOR_CYAN, (ex, ey), 3)
+            elif self.upgrade_path == 'B' and self.upgrade_tier >= 2:
+                pygame.draw.circle(surface, COLOR_WHITE, (ex, ey), 3)
+
+        pygame.draw.circle(surface, body_col, (ix, iy), 11)
         pygame.draw.circle(surface, COLOR_CYAN, (ix, iy), 5)
 
     def _create_projectile(self, target, all_enemies):

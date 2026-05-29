@@ -250,7 +250,7 @@ class Game:
 
         for e in dead:
             if e.reached_end:
-                self.lives -= 1
+                self.lives -= e.leak_damage
             else:
                 self.economy.earn(e.reward)
 
